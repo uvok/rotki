@@ -1,23 +1,14 @@
-DB_CREATE_ETHEREUM_TOKENS_LIST = """
+DB_CREATE_EVM_TOKENS_LIST = """
 CREATE TABLE IF NOT EXISTS underlying_tokens_list (
-    address VARCHAR[42] NOT NULL,
+    identifier TEXT NOT NULL,
     weight TEXT NOT NULL,
     parent_token_entry TEXT NOT NULL,
-    FOREIGN KEY(parent_token_entry) REFERENCES ethereum_tokens(address)
+    FOREIGN KEY(parent_token_entry) REFERENCES evm_tokens(identifier)
         ON DELETE CASCADE ON UPDATE CASCADE
-    FOREIGN KEY(address) REFERENCES ethereum_tokens(address) ON UPDATE CASCADE
-    PRIMARY KEY(address, parent_token_entry)
+    FOREIGN KEY(identifier) REFERENCES evm_tokens(identifier) ON UPDATE CASCADE
+    PRIMARY KEY(identifier, parent_token_entry)
 );
 """  # noqa: E501
-
-DB_CREATE_ETHEREUM_TOKENS = """
-CREATE TABLE IF NOT EXISTS ethereum_tokens (
-    address VARCHAR[42] PRIMARY KEY NOT NULL,
-    decimals INTEGER,
-    protocol TEXT
-);
-"""
-
 # Custom enum table for asset types
 DB_CREATE_ASSET_TYPES = """
 CREATE TABLE IF NOT EXISTS asset_types (
@@ -74,6 +65,18 @@ INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('W', 23);
 INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('X', 24);
 /* SOLANA TOKEN */
 INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('Y', 25);
+/* MATIC TOKEN */
+INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('Z', 26);
+/* XDAI TOKEN */
+INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('[', 27);
+/* OKEX TOKEN */
+INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('\', 28);
+/* FANTOM TOKEN */
+INSERT OR IGNORE INTO asset_types(type, seq) VALUES (']', 29);
+/* ARBITRUM TOKEN */
+INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('^', 30);
+/* OPTIMISM TOKEN */
+INSERT OR IGNORE INTO asset_types(type, seq) VALUES ('_', 31);
 """
 
 # Using asset_id as a primary key here since nothing else is guaranteed to be unique
@@ -114,7 +117,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 DB_CREATE_USER_OWNED_ASSETS = """
 CREATE TABLE IF NOT EXISTS user_owned_assets (
-    asset_id VARCHAR[24] NOT NULL PRIMARY KEY,
+    asset_id TEXT NOT NULL PRIMARY KEY,
     FOREIGN KEY(asset_id) REFERENCES assets(identifier) ON UPDATE CASCADE
 );
 """
@@ -148,15 +151,57 @@ CREATE TABLE IF NOT EXISTS price_history (
 );
 """
 
+DB_V3_CREATE_COMMON_ASSETS_DETAILS = """
+CREATE TABLE IF NOT EXISTS common_asset_details(
+    identifier TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+    name TEXT,
+    symbol TEXT,
+    coingecko TEXT,
+    cryptocompare TEXT,
+    forked TEXT,
+    FOREIGN KEY(forked) REFERENCES assets(identifier) ON UPDATE CASCADE
+);
+"""
+
+DB_V3_CREATE_ASSETS = """
+CREATE TABLE IF NOT EXISTS assets (
+    identifier TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+    type CHAR(1) NOT NULL DEFAULT('A') REFERENCES asset_types(type),
+    started INTEGER,
+    swapped_for TEXT,
+    common_details_id TEXT,
+    FOREIGN KEY(common_details_id) REFERENCES common_asset_details(identifier) ON UPDATE CASCADE
+);
+"""
+
+DB_V3_CREATE_EVM_TOKENS = """
+CREATE TABLE IF NOT EXISTS evm_tokens (
+    identifier TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+    token_type INTEGER NOT NULL,
+    chain INTEGER NOT NULL,
+    address VARCHAR[42] NOT NULL,
+    decimals INTEGER,
+    protocol TEXT
+);
+"""
+
+DB_V3_CREATE_MULTIASSETS = """
+CREATE TABLE IF NOT EXISTS multiasset_collector(
+    identifier TEXT NOT NULL,
+    child_asset_id TEXT,
+    FOREIGN KEY(child_asset_id) REFERENCES assets(identifier) ON UPDATE CASCADE
+    PRIMARY KEY(identifier, child_asset_id)
+);
+"""
+
 DB_SCRIPT_CREATE_TABLES = """
 PRAGMA foreign_keys=off;
 BEGIN TRANSACTION;
-{}{}{}{}{}{}{}{}{}
+{}{}{}{}{}{}{}{}
 COMMIT;
 PRAGMA foreign_keys=on;
 """.format(
-    DB_CREATE_ETHEREUM_TOKENS,
-    DB_CREATE_ETHEREUM_TOKENS_LIST,
+    DB_CREATE_EVM_TOKENS_LIST,
     DB_CREATE_SETTINGS,
     DB_CREATE_ASSET_TYPES,
     DB_CREATE_ASSETS,

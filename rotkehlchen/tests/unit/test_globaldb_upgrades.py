@@ -62,3 +62,21 @@ def test_upgrade_v1_v2(globaldb):
          ),
     )
     assert query.fetchone()[0] == 4
+
+
+@pytest.mark.parametrize('globaldb_version', [2])
+def test_upgrade_v2_v3(globaldb):
+    # at this point upgrade should have happened
+    assert globaldb.get_setting_value('version', None) == 3
+
+    cursor = globaldb._conn.cursor()
+    # Test that the assets where correctly translated
+    query = 'SELECT COUNT(*) from evm_tokens where chain = 1'
+    assert cursor.execute(query).fetchone()[0] == 1758
+    query = 'SELECT COUNT(*) from evm_tokens where chain = 43114'
+    assert cursor.execute(query).fetchone()[0] == 3
+
+    # Test that we have the same amount of assets
+    assert cursor.execute('SELECT COUNT(*) FROM common_asset_details;').fetchone()[0] == 2465
+    assert cursor.execute('SELECT COUNT(*) FROM user_owned_assets;').fetchone()[0] == 33
+    assert cursor.execute('SELECT COUNT(*) FROM underlying_tokens_list;').fetchone()[0] == 87

@@ -615,14 +615,14 @@ class HasEthereumToken(Asset):
 
         if not data.ethereum_address:
             raise DeserializationError(
-                'Tried to initialize a non Ethereum asset as Ethereum Token',
+                'Tried to initialize a non EVM token asset as an EVM Token',
             )
 
         object.__setattr__(self, 'ethereum_address', data.ethereum_address)
         object.__setattr__(self, 'decimals', data.decimals)
         object.__setattr__(self, 'protocol', data.protocol)
 
-        underlying_tokens = GlobalDBHandler().fetch_underlying_tokens(data.ethereum_address)
+        underlying_tokens = GlobalDBHandler().fetch_underlying_tokens(data.identifier)
         object.__setattr__(self, 'underlying_tokens', underlying_tokens)
 
     def serialize_all_info(self) -> Dict[str, Any]:
