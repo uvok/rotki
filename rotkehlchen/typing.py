@@ -364,6 +364,7 @@ class Location(DBEnumMixIn):
     UPHOLD = 33
     BITPANDA = 34
     BISQ = 35
+    BITPANDAPRO = 36
 
 
 class AssetMovementCategory(DBEnumMixIn):

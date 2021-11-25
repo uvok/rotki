@@ -11,6 +11,7 @@ export enum SupportedExchange {
   BITTREX = 'bittrex',
   BITMEX = 'bitmex',
   BITPANDA = 'bitpanda',
+  BITPANDAPRO = 'bitpandapro',
   BITFINEX = 'bitfinex',
   BINANCE = 'binance',
   COINBASE = 'coinbase',
