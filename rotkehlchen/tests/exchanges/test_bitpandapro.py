@@ -20,7 +20,7 @@ def test_name():
     assert exchange.name == 'bitpandapro1'
 
 
-BALANCE_RESPONSE="""
+BALANCE_RESPONSE = """
 {
     "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
     "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
@@ -107,5 +107,4 @@ def test_balances_succeeds(mock_bitpandapro: BitpandaPro):
     assert iota in balances
     assert balances[iota].amount == FVal("10.0")
     # no known asset, only via hash
-    #assert Asset("PAN") in balances
-
+    # assert Asset("PAN") in balances
