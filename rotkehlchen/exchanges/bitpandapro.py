@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from http import HTTPStatus
 
-from typing import TYPE_CHECKING, Any, DefaultDict, Dict, List, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Any, DefaultDict, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlencode
 
 import gevent
@@ -18,10 +18,11 @@ from rotkehlchen.assets.converters import asset_from_bitpanda
 from rotkehlchen.constants.misc import ZERO
 from rotkehlchen.constants.timing import DEFAULT_TIMEOUT_TUPLE, QUERY_RETRY_TIMES
 from rotkehlchen.errors import DeserializationError, RemoteError, UnknownAsset
-from rotkehlchen.exchanges.exchange import ExchangeInterface, ExchangeQueryBalances
+from rotkehlchen.exchanges.data_structures import MarginPosition
+from rotkehlchen.exchanges.exchange import ExchangeInterface, ExchangeQueryBalances, LedgerAction
 from rotkehlchen.inquirer import Inquirer
 from rotkehlchen.logging import RotkehlchenLogsAdapter
-from rotkehlchen.typing import ApiKey, ApiSecret, Location
+from rotkehlchen.typing import ApiKey, ApiSecret, Location, Timestamp
 from rotkehlchen.user_messages import MessagesAggregator
 from rotkehlchen.utils.serialization import jsonloads_dict
 from rotkehlchen.serialization.deserialize import deserialize_asset_amount
@@ -197,3 +198,17 @@ class BitpandaPro(ExchangeInterface):
             )
 
         return dict(assets_balance), ''
+
+    def query_online_margin_history(
+            self,  # pylint: disable=no-self-use
+            start_ts: Timestamp,  # pylint: disable=unused-argument
+            end_ts: Timestamp,  # pylint: disable=unused-argument
+    ) -> List[MarginPosition]:
+        return []  # noop for Bitpanda Pro
+
+    def query_online_income_loss_expense(
+            self,  # pylint: disable=no-self-use
+            start_ts: Timestamp,  # pylint: disable=unused-argument
+            end_ts: Timestamp,  # pylint: disable=unused-argument
+    ) -> List[LedgerAction]:
+        return []  # noop for Bitpanda Pro
