@@ -120,6 +120,14 @@ class BitpandaPro(ExchangeInterface):
         log.debug(f'Got Bitpanda Pro response: {decoded_json}')
         return decoded_json
 
+    def validate_api_key(self) -> Tuple[bool, str]:
+        """Validates that the Bitpanda Pro API key is good for usage in rotki"""
+        try:
+            self._api_query('/account/balances')
+        except RemoteError as e:
+            return False, f'Error validating Bitpanda Pro API Key due to {str(e)}'
+        return True, ''
+
     def query_balances(self, **kwargs: Any) -> ExchangeQueryBalances:
         try:
             balances = self._api_query("/account/balances")
