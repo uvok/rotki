@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 log = RotkehlchenLogsAdapter(logger)
 
+
 class BitpandaPro(ExchangeInterface):
     """
     Bitpanda Pro Exchange.
@@ -47,7 +48,7 @@ class BitpandaPro(ExchangeInterface):
             api_key: ApiKey,
             secret: ApiSecret,
             database: 'DBHandler',
-            msg_aggregator: MessagesAggregator
+            msg_aggregator: MessagesAggregator,
     ):
         super().__init__(
             name=name,
@@ -127,24 +128,28 @@ class BitpandaPro(ExchangeInterface):
             msg = f'Failed to query Bitpanda Pro balances. {str(e)}'
             return None, msg
 
+        # balances is now:
         # [ ...,
         #  {'account_holder': 'XXX',
         #   'account_id': 'XXX',
         #   'available': '0.0',
-        ##  This value denotes the last change that was made on the balance.
+        # # This value denotes the last change that was made on the balance.
         #   'change': '94.0',
         #   'currency_code': 'MIOTA',
         #   'locked': '0.0',
-        ## Global monotonically-increasing numerical sequence bound to account activity.
+        # # Global monotonically-increasing numerical sequence bound to account activity.
         #   'sequence': 1985345797,
-        ## ??? No docs, probably last change
+        # # ??? No docs, probably last change
         #   'time': '2021-05-18T06:05:30.239938Z'},
         # ...]
         assets_balance: DefaultDict[Asset, Balance] = defaultdict(Balance)
 
         for bal in balances:
             try:
-                amount = deserialize_asset_amount(bal['available']) + deserialize_asset_amount(bal['locked'])
+                amount = (
+                    deserialize_asset_amount(bal['available']) +
+                    deserialize_asset_amount(bal['locked'])
+                )
                 asset = asset_from_bitpanda(bal['currency_code'])
             except UnknownAsset as e:
                 self.msg_aggregator.add_warning(
