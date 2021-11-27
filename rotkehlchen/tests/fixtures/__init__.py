@@ -12,6 +12,7 @@ from rotkehlchen.tests.fixtures.exchanges.bitcoinde import *
 from rotkehlchen.tests.fixtures.exchanges.bitfinex import *
 from rotkehlchen.tests.fixtures.exchanges.bitmex import *
 from rotkehlchen.tests.fixtures.exchanges.bitpanda import *
+from rotkehlchen.tests.fixtures.exchanges.bitpandapro import *
 from rotkehlchen.tests.fixtures.exchanges.bitstamp import *
 from rotkehlchen.tests.fixtures.exchanges.bittrex import *
 from rotkehlchen.tests.fixtures.exchanges.coinbase import *
