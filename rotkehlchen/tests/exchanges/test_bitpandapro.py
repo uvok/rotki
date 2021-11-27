@@ -5,8 +5,11 @@ from unittest.mock import patch
 
 import pytest
 import requests
+from rotkehlchen.assets.asset import Asset
 
+import rotkehlchen.constants.assets as rota
 from rotkehlchen.exchanges.bitpandapro import BitpandaPro
+from rotkehlchen.fval import FVal
 from rotkehlchen.tests.utils.mock import MockResponse
 from rotkehlchen.typing import Location
 
@@ -37,50 +40,10 @@ BALANCE_RESPONSE="""
             "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
             "currency_code": "BTC",
             "change": "0.0001",
-            "available": "0.0028",
+            "available": "0.0",
             "locked": "0.006",
             "sequence": 500,
             "time": "2021-11-23T17:04:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "CHZ",
-            "change": "250",
-            "available": "0.0",
-            "locked": "0.0",
-            "sequence": 600,
-            "time": "2021-11-03T09:36:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "DOGE",
-            "change": "600.0",
-            "available": "0.8",
-            "locked": "611.0",
-            "sequence": 700,
-            "time": "2021-11-16T17:13:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "DOT",
-            "change": "1.0",
-            "available": "0.00004",
-            "locked": "3.0",
-            "sequence": 800,
-            "time": "2021-11-16T17:12:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "ETH",
-            "change": "0.02",
-            "available": "0.00005",
-            "locked": "0.08",
-            "sequence": 900,
-            "time": "2021-11-23T17:06:00.000000Z"
         },
         {
             "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
@@ -95,29 +58,9 @@ BALANCE_RESPONSE="""
         {
             "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
             "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "LINK",
-            "change": "4.0",
-            "available": "0.0",
-            "locked": "4.70",
-            "sequence": 1100,
-            "time": "2021-11-16T17:13:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "LTC",
-            "change": "0.0",
-            "available": "0.000008",
-            "locked": "0.0",
-            "sequence": 1200,
-            "time": "2021-11-10T21:43:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
             "currency_code": "MIOTA",
             "change": "100.0",
-            "available": "0.0",
+            "available": "10.0",
             "locked": "0.0",
             "sequence": 1300,
             "time": "2021-05-18T06:05:00.000000Z"
@@ -131,26 +74,6 @@ BALANCE_RESPONSE="""
             "locked": "0.0",
             "sequence": 1400,
             "time": "2021-11-04T09:58:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "XLM",
-            "change": "0.0",
-            "available": "0.0",
-            "locked": "0.0",
-            "sequence": 1500,
-            "time": "2021-05-16T13:37:00.000000Z"
-        },
-        {
-            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "account_holder": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
-            "currency_code": "XRP",
-            "change": "200.0",
-            "available": "0.5",
-            "locked": "300.0",
-            "sequence": 1600,
-            "time": "2021-11-23T17:05:00.000000Z"
         }
     ]
 }
@@ -172,3 +95,17 @@ def test_balances_succeeds(mock_bitpandapro: BitpandaPro):
     assert len(warnings) == 0
     assert len(errors) == 0
     assert len(msg) == 0
+
+    assert len(balances) == 4
+    assert rota.A_BEST in balances
+    assert balances[rota.A_BEST].amount == FVal("20.0") + FVal("4.0")
+    assert rota.A_BTC in balances
+    assert balances[rota.A_BTC].amount == FVal("0.006")
+    assert rota.A_EUR in balances
+    assert balances[rota.A_EUR].amount == FVal("41.655")
+    iota = Asset("IOTA")
+    assert iota in balances
+    assert balances[iota].amount == FVal("10.0")
+    # no known asset, only via hash
+    #assert Asset("PAN") in balances
+
