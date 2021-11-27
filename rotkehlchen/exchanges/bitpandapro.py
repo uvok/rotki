@@ -12,13 +12,19 @@ import requests
 
 from rotkehlchen.accounting.structures import Balance
 from rotkehlchen.assets.asset import Asset
+from rotkehlchen.constants.assets import A_BEST
+# might be reusable
+from rotkehlchen.assets.converters import asset_from_bitpanda
+from rotkehlchen.constants.misc import ZERO
 from rotkehlchen.constants.timing import DEFAULT_TIMEOUT_TUPLE, QUERY_RETRY_TIMES
 from rotkehlchen.errors import DeserializationError, RemoteError, UnknownAsset
 from rotkehlchen.exchanges.exchange import ExchangeInterface, ExchangeQueryBalances
+from rotkehlchen.inquirer import Inquirer
 from rotkehlchen.logging import RotkehlchenLogsAdapter
 from rotkehlchen.typing import ApiKey, ApiSecret, Location
 from rotkehlchen.user_messages import MessagesAggregator
 from rotkehlchen.utils.serialization import jsonloads_dict
+from rotkehlchen.serialization.deserialize import deserialize_asset_amount
 
 if TYPE_CHECKING:
     from rotkehlchen.db.dbhandler import DBHandler
@@ -50,6 +56,7 @@ class BitpandaPro(ExchangeInterface):
             secret=secret,
             database=database,
         )
+        self.msg_aggregator = msg_aggregator
         self.uri = 'https://api.exchange.bitpanda.com/public/v1'
         # Bitpanda Pro uses Authorization: Bearer
         self.session.headers.update({'Authorization': "Bearer " + self.api_key})
@@ -120,5 +127,60 @@ class BitpandaPro(ExchangeInterface):
             msg = f'Failed to query Bitpanda Pro balances. {str(e)}'
             return None, msg
 
+        # [ ...,
+        #  {'account_holder': 'XXX',
+        #   'account_id': 'XXX',
+        #   'available': '0.0',
+        ##  This value denotes the last change that was made on the balance.
+        #   'change': '94.0',
+        #   'currency_code': 'MIOTA',
+        #   'locked': '0.0',
+        ## Global monotonically-increasing numerical sequence bound to account activity.
+        #   'sequence': 1985345797,
+        ## ??? No docs, probably last change
+        #   'time': '2021-05-18T06:05:30.239938Z'},
+        # ...]
         assets_balance: DefaultDict[Asset, Balance] = defaultdict(Balance)
+
+        for bal in balances:
+            try:
+                amount = deserialize_asset_amount(bal['available']) + deserialize_asset_amount(bal['locked'])
+                asset = asset_from_bitpanda(bal['currency_code'])
+            except UnknownAsset as e:
+                self.msg_aggregator.add_warning(
+                    f'Found unsupported/unknown Bitpanda Pro asset {e.asset_name}. '
+                    f' Ignoring its balance query.',
+                )
+                continue
+            except (DeserializationError, KeyError) as e:
+                msg = str(e)
+                if isinstance(e, KeyError):
+                    msg = f'Missing key entry for {msg}.'
+                self.msg_aggregator.add_error(
+                    'Error processing Bitpanda Pro balance. Check logs '
+                    'for details. Ignoring it.',
+                )
+                log.error(
+                    'Error processing bitpanda balance',
+                    entry=bal,
+                    error=msg,
+                )
+                continue
+
+            if amount == ZERO:
+                continue
+
+            try:
+                usd_price = Inquirer().find_usd_price(asset=asset)
+            except RemoteError as e:
+                self.msg_aggregator.add_error(
+                    f'Error processing Bitpanda Pro balance entry due to inability to '
+                    f'query USD price: {str(e)}. Skipping balance entry',
+                )
+                continue
+            assets_balance[asset] += Balance(
+                amount=amount,
+                usd_value=amount * usd_price,
+            )
+
         return dict(assets_balance), ''
