@@ -17,9 +17,22 @@ def test_name():
     assert exchange.name == 'bitpandapro1'
 
 
-def test_balances(mock_bitpandapro: BitpandaPro):
-    # with patch.object(mock_bitpandapro.session, 'get', side_effect=lambda: None):
-    #     balances, msg = mock_bitpandapro.query_balances()
-    #
-    # res = mock_bitpandapro.query_balances()
-    pass
+BALANCE_RESPONSE="""
+"""
+
+
+def test_balances_succeeds(mock_bitpandapro: BitpandaPro):
+    def mock_bitpandapro_query(url: str, **kwargs):  # pylint: disable=unused-argument
+        if '/account/balances' in url:
+            return MockResponse(status_code=HTTPStatus.OK, text=BALANCE_RESPONSE)
+        # else
+        raise AssertionError(f'Unexpected url {url} in bitpanda test')
+
+    with patch.object(mock_bitpandapro.session, 'get', side_effect=mock_bitpandapro_query):
+        balances, msg = mock_bitpandapro.query_balances()
+
+    warnings = mock_bitpandapro.msg_aggregator.consume_warnings()
+    errors = mock_bitpandapro.msg_aggregator.consume_errors()
+    assert len(warnings) == 0
+    assert len(errors) == 0
+    assert len(msg) == 0
