@@ -18,7 +18,7 @@ from rotkehlchen.assets.converters import asset_from_bitpanda
 from rotkehlchen.constants.misc import ZERO
 from rotkehlchen.constants.timing import DEFAULT_TIMEOUT_TUPLE, QUERY_RETRY_TIMES
 from rotkehlchen.errors import DeserializationError, RemoteError, UnknownAsset
-from rotkehlchen.exchanges.data_structures import MarginPosition
+from rotkehlchen.exchanges.data_structures import AssetMovement, MarginPosition
 from rotkehlchen.exchanges.exchange import ExchangeInterface, ExchangeQueryBalances, LedgerAction
 from rotkehlchen.inquirer import Inquirer
 from rotkehlchen.logging import RotkehlchenLogsAdapter
@@ -198,6 +198,37 @@ class BitpandaPro(ExchangeInterface):
             )
 
         return dict(assets_balance), ''
+
+    def query_online_deposits_withdrawals(
+            self,
+            start_ts: Timestamp,
+            end_ts: Timestamp,
+    ) -> List[AssetMovement]:
+        # from and to are ISO 8601 / RFC3339 timestamps
+        options = {}
+        deposits = []
+        withdrawals = []
+
+        while True:
+            res = self._api_query("account/deposits", options)
+            deposits.extend(res["deposit_history"])
+            cursor = res.get("cursor", None)
+            if cursor:
+                options["cursor"] = cursor
+            else:
+                break
+
+        options = {}
+        while True:
+            res = self._api_query("account/withdrawals", options)
+            withdrawals.extend(res["withdrawal_history"])
+            cursor = res.get("cursor", None)
+            if cursor:
+                options["cursor"] = cursor
+            else:
+                break
+
+        return []
 
     def query_online_margin_history(
             self,  # pylint: disable=no-self-use
