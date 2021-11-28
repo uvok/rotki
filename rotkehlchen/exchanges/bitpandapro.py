@@ -131,7 +131,7 @@ class BitpandaPro(ExchangeInterface):
 
     def query_balances(self, **kwargs: Any) -> ExchangeQueryBalances:
         try:
-            balances = self._api_query("/account/balances")
+            balances = self._api_query("account/balances")
             balances = balances['balances']
         except RemoteError as e:
             msg = f'Failed to query Bitpanda Pro balances. {str(e)}'
