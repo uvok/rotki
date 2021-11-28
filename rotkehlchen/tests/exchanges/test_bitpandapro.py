@@ -108,3 +108,106 @@ def test_balances_succeeds(mock_bitpandapro: BitpandaPro):
     assert balances[iota].amount == FVal("10.0")
     # no known asset, only via hash
     # assert Asset("PAN") in balances
+
+MOCK_DEPOSITS_RESPONSE_P1 = """
+{
+    "max_page_size": 2,
+    "cursor": "foobar",
+    "deposit_history": [
+        {
+            "transaction_id": "ffffffff-eeee-dddd-cccc-000000000000",
+            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
+            "time": "2021-06-01T16:44:26.000000Z",
+            "currency": "EUR",
+            "funds_source": "EXTERNAL",
+            "type": "FIAT",
+            "amount": "160.0",
+            "fee_amount": "2.4",
+            "fee_currency": "EUR"
+        },
+        {
+            "transaction_id": "ffffffff-eeee-dddd-cccc-000000000001",
+            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
+            "time": "2021-05-25T16:38:31.000000Z",
+            "currency": "EUR",
+            "funds_source": "EXTERNAL",
+            "type": "FIAT",
+            "amount": "26.6",
+            "fee_amount": "0.4",
+            "fee_currency": "EUR"
+        }
+    ]
+}
+"""
+
+MOCK_DEPOSITS_RESPONSE_P2 = """
+{
+    "deposit_history": [
+        {
+            "transaction_id": "ffffffff-eeee-dddd-cccc-000000000002",
+            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
+            "time": "2021-04-02T11:27:31.000000Z",
+            "currency": "DOGE",
+            "funds_source": "INTERNAL",
+            "type": "CRYPTO",
+            "amount": "25000.0",
+            "fee_amount": "0.0",
+            "fee_currency": "DOGE"
+        }
+    ]
+}
+"""
+
+MOCK_WITHDRAWALS_RESPONSE = """
+{
+    "withdrawal_history": [
+        {
+            "transaction_id": "ffffffff-eeee-dddd-cccc-000000000003",
+            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
+            "time": "2021-10-16T15:01:19.000000Z",
+            "currency": "EUR",
+            "funds_source": "EXTERNAL",
+            "type": "FIAT",
+            "amount": "400.0",
+            "fee_amount": "0.0",
+            "fee_currency": "EUR"
+        },
+        {
+            "transaction_id": "ffffffff-eeee-dddd-cccc-000000000004",
+            "account_id": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
+            "time": "2021-04-05T19:15:11.000000Z",
+            "currency": "EUR",
+            "funds_source": "EXTERNAL",
+            "type": "FIAT",
+            "amount": "500.0",
+            "fee_amount": "0.0",
+            "fee_currency": "EUR"
+        }
+    ]
+}
+"""
+
+def test_query_online_deposits_withdrawals(mock_bitpandapro: BitpandaPro):
+    deposit_pagecount = 0
+    # test cursor handling as well
+    def mock_bitpandapro_query(url: str, **kwargs):  # pylint: disable=unused-argument
+        nonlocal deposit_pagecount
+        if '/account/deposits' in url:
+            if deposit_pagecount == 0:
+                response = MockResponse(status_code=HTTPStatus.OK, text=MOCK_DEPOSITS_RESPONSE_P1)
+            elif deposit_pagecount == 1:
+                if "cursor=foobar" in url:
+                    response = MockResponse(status_code=HTTPStatus.OK, text=MOCK_DEPOSITS_RESPONSE_P2)
+                else:
+                    raise AssertionError(f'Invalid cursor')
+            else:
+                raise AssertionError(f'Too many pages fetched')
+            deposit_pagecount += 1
+            return response
+        elif '/account/withdrawals' in url:
+            return MockResponse(status_code=HTTPStatus.OK, text=MOCK_WITHDRAWALS_RESPONSE)
+        # else
+        raise AssertionError(f'Unexpected url {url} in bitpanda test')
+
+    with patch.object(mock_bitpandapro.session, 'get', side_effect=mock_bitpandapro_query):
+        movements = mock_bitpandapro.query_online_deposits_withdrawals(0, 0)
